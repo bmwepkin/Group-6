@@ -1,2 +1,15 @@
 Data Programmning in R: Group Project Proposal
 Team: Jonathan Patterson, Nimisha Pachory, Viswa Subramanian, Jay Streff & Brandon Wepking
+
+
+Our team was interested in the law and order situation in the city of Dallas, Texas. We downloaded a file from the website of the City of Dallas, using the following URL:
+https://www.dallasopendata.com/Public-Safety/Police-Incidents/qv6i-rri7/data. The data, in turn, was sourced from this online site Dallas Open Data, used by the City of Dallas. This was the disclaimer on the website: In disseminating this crime information, we must also comply with current laws that regulate the release of potentially sensitive and confidential information. To ensure that privacy concerns are protected and legal standards are met, report data is "filtered" prior to being made available to the public.
+
+The file, in its entirety, spans police incidents from 2014 to 2019. It has 100 columns and 608K rows. However, we intend to only look at data from the year 2018. This narrows it down to 133K rows of data. 
+
+We also intend to use R to investigate the following questions: 
+Which neighbourhoods (based on zipcodes) report the most crimes?
+How quick is the response time of Dallas Police Department?
+
+Using this dataset, we aim to have a more holistic understanding of law and order in America's fourth most populous metropolitan area. 
+
