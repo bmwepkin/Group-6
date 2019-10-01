@@ -1,5 +1,5 @@
 Data Programmning in R: Group Project Proposal
-Team: Jonathan Patterson, Nimisha Pachory, Viswanathan Subramanian, Jay Streff & Brandon Wepking
+Team: Jonathan Patterson, Nimisha Pachory, Viswa Subramanian, Jay Streff & Brandon Wepking
 
 
 Our team was interested in the law and order situation in the city of Dallas, Texas. We downloaded a file from the website of the City of Dallas, using the following URL:
@@ -10,6 +10,8 @@ The file, in its entirety, spans police incidents from 2014 to 2019. It has 100 
 We also intend to use R to investigate the following questions: 
 Which neighbourhoods (based on zipcodes) report the most crimes?
 How quick is the response time of Dallas Police Department?
+
+If other interesting questions come up during our analysis with R, we could seek answers to those as well. 
 
 Using this dataset, we aim to have a more holistic understanding of law and order in America's fourth most populous metropolitan area. 
 
