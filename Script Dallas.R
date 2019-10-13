@@ -4,13 +4,18 @@ library(readr)
 #install dplyr
 library(dplyr)
 
+#defing na and assign to my_na
 my_na <- c("", "0", "UNK", "G", "J", "None", "N", "Unknown", "NA")
+#read in raw data file; (check file name prior to read_csv)
 df <- read_csv("Police_Incidents (1).csv", na=my_na)
+#filter for 2018
 df <- filter(df, `Year of Incident` == 2018)
+#define columns for us in project
 my_cols <- c("Type of Incident", "Type  Location", "Incident Address", "Reporting Area", "Division", "Council District", "Target Area Action Grids", "Date1 of Occurrence", "Day1 of the Week", "Time1 of Occurrence", "Date of Report", "Date incident created", "Call Date Time", "Call Cleared Date Time", "Call Dispatch Date Time", "Person Involvement Type", "Victim Type", "Victim Name", "Victim Race", "Victim Gender", "Victim Age", "Offense Status", "Hate Crime", "Weapon Used", "Gang Related Offense", "Drug Related Istevencident", "NIBRS Crime Category", "Update Date", "X Coordinate", "Y Cordinate", "Zip Code")
 df <- df[, my_cols]
 library(readxl)
 data_description <- read_excel("Dallas_Data_Definitions.xlsx", sheet = 1)
+#Rename columns, removing space
 names(df)[names(df) == "Y Cordinate"] <- "Y_Coordinate" 
 names(df)[names(df) == "Zip Code"] <- "Zip_Code" 
 names(df)[names(df) == "X Coordinate"] <- "X_Coordinate" 
