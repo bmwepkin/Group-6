@@ -17,3 +17,15 @@ my_cols <- cols(`Hate Crime` = col_character(),
 df <- read_csv("Police_Incidents_2018.csv", col_types = my_cols)
 
 
+# Separate Lat, Long from Location1 Column
+library(stringr)
+mat <- str_match(df$Location1, "\\((.*?), (.*?)\\)")
+df$lat <- as.double(mat[,2])
+df$long <- as.double(mat[,3])
+
+# Plot Zipcode, Lat and Long
+df$region <- factor(substr(df$`Zip Code`, 1, 2))
+p <- qplot(long, lat, na.rm = TRUE, data = df1, geom = "dotplot", color = region) +
+  geom_jitter(aes(alpha = I(0.2), color = "red")) +
+  scale_y_continuous(name = "Latitude", limits = c(32.5, 33.1)) +
+  scale_x_continuous(name = "Longitude", limits = c(-97.1, -96.45))
