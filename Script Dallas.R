@@ -90,3 +90,12 @@ df$Zip_Code <- factor(df$Zip_Code)
 df <- arrange(df, desc(Update_Date))
 df <- df[(11878:65596), ]
 df$Hate_Crime <- NULL
+
+#Plans
+#Formating the date and time for response time - Jon
+#Handling of NAs - Viswa
+#When does crime occur most, months days of the week, etc - Jon
+#Intital plotting incedents by zip code/neighborhood/council districts(12-14) - Brandon
+  #Gender or race as potential other feateures to plot - Jay
+#Another option to filter on another year and view trends
+#Violent crime maps, type of crime groupings of crime category NIBRS Crime category - Nimisha
