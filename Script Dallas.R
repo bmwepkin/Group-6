@@ -70,6 +70,7 @@ df <- subset(df, Victim_Age >0 & Victim_Age <100)
 df <- subset(df, Zip_Code >=75001 & Zip_Code <=76217)
 df <- arrange(df, Call_Dispatch_Date_Time)
 df <- subset(df, Council_District !="9")
+#Start Filter out some observations outsied of 2018
 df <- df[(7:66385), ]
 df <- arrange(df, desc(Call_Cleared_Date_Time))
 df <- df[(17:66369), ]
@@ -79,6 +80,7 @@ df <- df[(1:66344), ]
 df <- arrange(df, Date_of_Occurrence)
 df <- df[(747:66344), ]
 df <- df[(1:65596), ]
+#End Filter out some observations outsied of 2018
 df$Zip_Code <- factor(df$Zip_Code)
 df <- arrange(df, desc(Update_Date))
 df <- df[(11878:65596), ]
