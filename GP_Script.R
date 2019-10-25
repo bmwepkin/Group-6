@@ -18,15 +18,17 @@ read_PoliceIncidents_ByYear <- function(year, columns, nas) {
   df <- NULL
   datafilename <- sprintf("Police_Incidents_%s.csv", year)
   if (file.exists(datafilename)) {
-    print (sprintf("Reading...%s", datafilename)) 
+    message (sprintf("Reading Police Incidents file...%s", datafilename))
     df <- read_csv(datafilename, col_types = mycols, na = nas)
   } else {
-    print("Reading...Police_Incidents.csv")
+    message("Reading...Police_Incidents.csv")
     df <- read_csv("Police_Incidents.csv", col_types = mycols, na = nas)
     df <- filter(df, `Year of Incident` == year)
-    print (sprintf("Writing...%s", datafilename)) 
+    message(sprintf("Writing...%s", datafilename)) 
     write_csv(df, datafilename)
   }
+  
+  message("Completed loading data.")
   
   df
 }
@@ -42,6 +44,8 @@ splitLatLongFromLocation <- function() {
 }
 
 renameColumns <- function(df) {
+  message("Renaming Columns for easy access.")
+  
   names(df) <- gsub(" ", "_", names(df))
   names(df) <- gsub("Day1", "Day", names(df))
   names(df) <- gsub("Date1", "Date", names(df))
@@ -65,6 +69,8 @@ getColumnswithLessNAs <- function(df, threshold) {
 }
 
 convertDataTypes <- function(df) {
+  message("Coercing Columns...")
+  
   df$NIBRS_Crime_Category <- factor(df$NIBRS_Crime_Category)
   df$Offense_Status <- factor(df$Offense_Status)
   df$Person_Involvement_Type <- factor(df$Person_Involvement_Type)
@@ -99,10 +105,12 @@ saveplot <- function(plot = NULL, name = "graphics", width = 6, height = 4) {
   ggsave(filename = paste(name, ".png", sep = ""), plot = plot, width = width, height = height, dpi = 600)
 }
 
-analyzeAndPlot_ResponseTime <- function(df) {
+analyzeAndPlot_ResponseTime <- function(df, year) {
+  message("Analyzing Response time...")
+  
   df <- mutate(df, Response_Time = as.numeric(difftime(df$Call_Dispatch_Date_Time, df$Call_Date_Time, units = "mins")))
   df <- mutate(df, Month = factor(months(df$Date_of_Occurrence, abbreviate = FALSE), levels = month.name))
-  df <- mutate(df, Day_of_Month <- as.POSIXlt(df$Date_of_Occurrence)$mday)
+  df <- mutate(df, Day_of_Month = as.POSIXlt(df$Date_of_Occurrence)$mday)
   
   df <- filter(df, Response_Time > 0, Response_Time < 5000)
   
@@ -110,17 +118,25 @@ analyzeAndPlot_ResponseTime <- function(df) {
   # qplot(Day_of_Week, data = df, geom = "bar")
   # qplot(Month, data =df, geom = "bar")
   
-  plotResponseTime(df, "Month", "Reponse_By_Month")
-  plotResponseTime(df, "Day_of_the_Week", "Reponse_By_DayofWeek")
-  plotResponseTime(df, "Day_of_Month", "Reponse_By_DayofMonth")
+  plotResponseTime(df, "Month",  paste("Reponse_By_Month", year, sep = "_"))
+  plotResponseTime(df, "Day_of_the_Week", paste("Reponse_By_DayofWeek", year, sep = "_"))
+  plotResponseTime(df, "Day_of_Month", paste("Reponse_By_DayofMonth", year, sep = "_"))
+  
+  message("Completed plotting and saving Charts.")
+  
+  df
 }
 
 plotResponseTime <- function(df, xcol, name) {
   df <- ungroup(df)
-  df <- group_by(df, !!xcol)
+  df <- group_by_(df, xcol)
   df <- summarize(df, num_incidents = n(), med_response = median(Response_Time))
-  p <- ggplot(df, aes(x = !!xcol, y = num_incidents, fill = med_response)) + geom_col(position = "dodge")
+  p <- ggplot(df, aes(x = df[[xcol]], y = num_incidents, fill = med_response)) + geom_col(position = "dodge")
+  
   saveplot(p, name)
+  message(sprintf("Saving %s", name))
+  
+  p
 }
 
 preparePoliceIncidents <- function(year) {
@@ -132,16 +148,24 @@ preparePoliceIncidents <- function(year) {
   
   df <- read_PoliceIncidents_ByYear(year, my_cols, my_na)
   
-  columns <- c(getColumnswithLessNAs(df, 10000), names(df)[grepl("Victim*", names(df))])
+  # To Get all Victim columns
+  # names(df)[grepl("Victim*", names(df))]    
+  
+  columns <- c(getColumnswithLessNAs(df, 10000), "Victim Gender", "Victim Age", "Victim Ethnicity", "Victim Race")
 
   df <- select (df, columns)
+  df <- df[complete.cases(df), ]
+  
+  message(sprintf("Cleaned up the data and the final number of rows are : %s", nrow(df)))
+  
   df <- renameColumns(df)
   df <- convertDataTypes(df)
-  
+
   df
 }
 
 ###############################################################################
 
-df <- preparePoliceIncidents(2018)
-analyzeAndPlot_ResponseTime(df)
+year <- 2018
+df <- preparePoliceIncidents(year)
+analyzeAndPlot_ResponseTime(df, year)
