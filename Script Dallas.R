@@ -90,6 +90,28 @@ df$Zip_Code <- factor(df$Zip_Code)
 df <- arrange(df, desc(Update_Date))
 df <- df[(11878:65596), ]
 df$Hate_Crime <- NULL
+#Overall chart of crimes in Dallas 
+df_crime_category <- sort(table(df$NIBRS_Crime_Category), decreasing = TRUE)
+df_crime_category <- data.frame(df_crime_category[df_crime_category > 100])
+colnames(df_crime_category) <- c("Category", "Frequency")
+df_crime_category$Percentage <- df_crime_category$Frequency / sum(df_crime_category$Frequency)
+library(ggrepel)
+bp <- ggplot(df_crime_category, aes(x=Category, y=Frequency, fill=Category)) + geom_bar(stat="identity") + theme(axis.text.x=element_blank())
+#Overall pie chart of crimes
+pie1 <-ggplot(df_crime_category, aes(x="", y=Percentage, fill=Category))+ geom_bar(stat="identity") + coord_polar("y") 
+#Victim Gender
+gender <- ddply(df, .(Victim_Gender, NIBRS_Crime_Category), summarise, count=length(Victim_Gender))
+o3<- gender %>% ggplot(aes(reorder(x = NIBRS_Crime_Category, count), y = count)) + geom_col(fill="red") + geom_text(aes(label=count), color="black", hjust=-0.1, size=3) + coord_flip() + facet_wrap(~Victim_Gender) + labs(x="Crime Description", y="Victim Sex")
+#Victim Race
+race.group <- ddply(df, .(Victim_Race, NIBRS_Crime_Category), summarise, count=length(Victim_Race))
+o2<- race.group %>% ggplot(aes(reorder(x = NIBRS_Crime_Category, count), y = count)) + geom_col(fill="red") + geom_text(aes(label=count), color="black", hjust=-0.1, size=3) + coord_flip() + facet_wrap(~Victim_Race) + labs(x="Total", y="Crime Description")
+#Victim Age
+df$age_group <- cut(df$Victim_Age, breaks = c(0, 19, 35, 55, 99), labels = c("Teenager", "Young Adult", "Middle Age", "Elderly"))
+age.group <- ddply(df, .(age_group, NIBRS_Crime_Category), summarise, count=length(age_group))
+o1<- age.group %>% ggplot(aes(reorder(x = NIBRS_Crime_Category, count), y = count)) + geom_col(fill="coral2") + coord_flip() + facet_wrap(~age_group) + labs(x="Total", y="Crime Description")
+write_csv(df, "Police_Indicidents_Final.csv")
+
+
 
 #Plans
 #Formating the date and time for response time - Jon
