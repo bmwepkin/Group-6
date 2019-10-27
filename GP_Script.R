@@ -101,22 +101,18 @@ convertDataTypes <- function(df) {
   df
 }
 
-saveplot <- function(plot = NULL, name = "graphics", width = 6, height = 4) {
-  ggsave(filename = paste(name, ".png", sep = ""), plot = plot, width = width, height = height, dpi = 600)
+saveplot <- function(plot = NULL, name = "graphics", type = ".png", width = 6, height = 4) {
+  ggsave(filename = paste(name, type, sep = ""), plot = plot, width = width, height = height, dpi = 600)
 }
 
 analyzeAndPlot_ResponseTime <- function(df, year) {
   message("Analyzing Response time...")
   
   df <- mutate(df, Response_Time = as.numeric(difftime(df$Call_Dispatch_Date_Time, df$Call_Date_Time, units = "mins")))
-  df <- mutate(df, Month = factor(months(df$Date_of_Occurrence, abbreviate = FALSE), levels = month.name))
+  df <- mutate(df, Month = factor(months(df$Date_of_Occurrence, abbreviate = TRUE), levels = month.abb))
   df <- mutate(df, Day_of_Month = as.POSIXlt(df$Date_of_Occurrence)$mday)
   
   df <- filter(df, Response_Time > 0, Response_Time < 5000)
-  
-  # qplot(Day_of_Month, data = df, geom = "bar")
-  # qplot(Day_of_Week, data = df, geom = "bar")
-  # qplot(Month, data =df, geom = "bar")
   
   plotResponseTime(df, "Month",  paste("Reponse_By_Month", year, sep = "_"))
   plotResponseTime(df, "Day_of_the_Week", paste("Reponse_By_DayofWeek", year, sep = "_"))
@@ -131,8 +127,15 @@ plotResponseTime <- function(df, xcol, name) {
   df <- ungroup(df)
   df <- group_by_(df, xcol)
   df <- summarize(df, num_incidents = n(), med_response = median(Response_Time))
-  p <- ggplot(df, aes(x = df[[xcol]], y = num_incidents, fill = med_response)) + geom_col(position = "dodge")
-  
+  df <- mutate(df, response = cut(med_response, breaks = quantile(med_response), include.lowest = TRUE, labels = c("Fastest", "Fast", "Slow", "Slowest")))
+  p  <- ggplot(df, aes(x = df[[xcol]], y = num_incidents, fill = response)) +
+        geom_col(position = "dodge") +
+        scale_fill_brewer(palette = "YlOrRd", name = "Response Time", direction = -1, type = "qual") +
+        xlab(gsub("_", " ", xcol)) + ylab("Total Incidents") +
+        theme(text = element_text(size = 12)) +
+        theme(panel.background = element_rect(fill = "azure3", colour = "slategray2" )) +
+        ggtitle("How responsive the Dallas Police Dept is?")
+
   saveplot(p, name)
   message(sprintf("Saving %s", name))
   
@@ -167,5 +170,5 @@ preparePoliceIncidents <- function(year) {
 ###############################################################################
 
 year <- 2018
-df <- preparePoliceIncidents(year)
-analyzeAndPlot_ResponseTime(df, year)
+police <- preparePoliceIncidents(year)
+analyzeAndPlot_ResponseTime(police, year)
