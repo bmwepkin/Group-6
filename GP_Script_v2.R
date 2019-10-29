@@ -361,5 +361,14 @@ dallas2 <- get_map(location = "dallas", zoom = 14, color = "bw")
 ggmap(dallas2)
 DallasMap2 <- ggmap(dallas2, base_layer = ggplot(aes(x = long, y = lat), data = violent_crime))
 d18 <- DallasMap2 + stat_density2d(aes(x = long, y = lat, fill = ..level.., alpha = ..level..), bins = I(5), geom = "polygon", data = violent_crime)+scale_fill_gradient2("Violent\nCrime\nDensity", low = "white", mid = "orange", high = "red", midpoint = 500)+ labs(x = "Longitude", y = "Latitude") + facet_wrap(~ Month) + scale_alpha(range = c(.2, .55), guide = FALSE) + ggtitle("Violent Crime Contour Map of Dallas by Month") + guides(fill = guide_colorbar(barwidth = 1.5, barheight = 10))
-                                                                                                                                                                                                                                                                                                                               
+
+#for brandon - code for slide 17
+temp <- ddply(violent_crime, .(NIBRS_Crime_Category, `Time1 of Occurrence`), summarise, count=length(`Time1 of Occurrence`))
+g <- ggplot(temp, aes(fill= NIBRS_Crime_Category, y=count, x=`Time1 of Occurrence`)) + geom_bar(position="stack", stat="identity")
+    
+#for brandon- code for slide 16
+ temp <- ddply(violent_crime, .(NIBRS_Crime_Category, Day_of_the_Week), summarise, count=length(Date_of_Occurrence))
+f <- ggplot(temp, aes(fill= NIBRS_Crime_Category, y=count, x=Day_of_the_Week)) + geom_bar(position="stack", stat="identity")
+f <- f + scale_fill_brewer(name="OFFENSE")
+f <- f + ggtitle("Violent Crime by Day of Week")
 
