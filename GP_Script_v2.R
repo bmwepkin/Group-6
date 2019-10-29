@@ -363,8 +363,17 @@ DallasMap2 <- ggmap(dallas2, base_layer = ggplot(aes(x = long, y = lat), data = 
 d18 <- DallasMap2 + stat_density2d(aes(x = long, y = lat, fill = ..level.., alpha = ..level..), bins = I(5), geom = "polygon", data = violent_crime)+scale_fill_gradient2("Violent\nCrime\nDensity", low = "white", mid = "orange", high = "red", midpoint = 500)+ labs(x = "Longitude", y = "Latitude") + facet_wrap(~ Month) + scale_alpha(range = c(.2, .55), guide = FALSE) + ggtitle("Violent Crime Contour Map of Dallas by Month") + guides(fill = guide_colorbar(barwidth = 1.5, barheight = 10))
 
 #for brandon - code for slide 17
+#bmw-10/29/19 
+#temp <- ddply(violent_crime, .(NIBRS_Crime_Category, `Time_of_Occurrence`), summarise, count=length(`Time_of_Occurrence`))
+#g <- ggplot(temp, aes(fill= NIBRS_Crime_Category, y=count, x=`Time_of_Occurrence`)) + geom_bar(position="stack", stat="identity")
 temp <- ddply(violent_crime, .(NIBRS_Crime_Category, `Time_of_Occurrence`), summarise, count=length(`Time_of_Occurrence`))
-g <- ggplot(temp, aes(fill= NIBRS_Crime_Category, y=count, x=`Time_of_Occurrence`)) + geom_bar(position="stack", stat="identity")
+#g <- ggplot(temp, aes(fill= NIBRS_Crime_Category, y=count, x=`Time_of_Occurrence`)) + geom_bar(position="stack", stat="identity") 
+g <- ggplot(temp, aes(fill= NIBRS_Crime_Category, y=count, x=`Time_of_Occurrence`)) + geom_density(position="stack", stat="identity")
+g <- g + ggtitle("Violent Crime Count by Time of Occurance") + xlab("Time of Crime") + ylab("Number of Crimes")
+g <- g + facet_grid(rows = vars(NIBRS_Crime_Category)) + ylim(0, 75) + scale_fill_brewer(name = "NIBRS_Crime_Category", palette = "YlOrRd")
+g <- g + theme(legend.position = "none")
+g
+#bmw-10/29/19
     
 #for brandon- code for slide 16
  temp <- ddply(violent_crime, .(NIBRS_Crime_Category, Day_of_the_Week), summarise, count=length(Date_of_Occurrence))
