@@ -18,7 +18,7 @@ library(compstatr)
 # set up google maps
 require(devtools)
 devtools::install_github("dkahle/ggmap", ref = "tidyup")
-register_google(key="AIzaSyAJeZjZOVBOk7eEn6HHssM5ykGKKbINMjs")
+# register_google(key="") add your own key
 
 # create the data frame
 url <- "https://www.dallasopendata.com/api/views/qv6i-rri7/rows.csv"
