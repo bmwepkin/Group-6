@@ -212,3 +212,9 @@ dallas2 <- get_map(location = "dallas", zoom = 14, color = "bw")
 ggmap(dallas2)
 DallasMap2 <- ggmap(dallas2, base_layer = ggplot(aes(x = long, y = lat), data = violent_crime))
 d18 <- DallasMap2 + stat_density2d(aes(x = long, y = lat, fill = ..level.., alpha = ..level..), bins = I(5), geom = "polygon", data = violent_crime)+scale_fill_gradient2("Violent\nCrime\nDensity", low = "white", mid = "orange", high = "red", midpoint = 500)+ labs(x = "Longitude", y = "Latitude") + facet_wrap(~ month) + scale_alpha(range = c(.2, .55), guide = FALSE) + ggtitle("Violent Crime Contour Map of Dallas by Month") + guides(fill = guide_colorbar(barwidth = 1.5, barheight = 10))
+
+#byrace
+(library plyr)
+race.group <- ddply(violent_crime, .(Victim_Race, NIBRS_Crime_Category), summarise, count=length(Victim_Race))
+o2<- race.group %>% ggplot(aes(reorder(x = NIBRS_Crime_Category, count), y = count)) + geom_col(fill="red") + geom_text(aes(label=count), color="black", hjust=-0.1, size=3) + coord_flip() + facet_wrap(~Victim_Race) + labs(x="Total", y="Crime Description")
+
