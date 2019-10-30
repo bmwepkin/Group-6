@@ -52,7 +52,7 @@ plotResponseTime <- function(df, xcol, name) {
     xlab(gsub("_", " ", xcol)) + ylab("Total Incidents") +
     theme(text = element_text(size = 12)) +
     theme(panel.background = element_rect(fill = "azure3", colour = "slategray2" )) +
-    ggtitle("How responsive the Dallas Police Dept is?")
+    ggtitle("How responsive is the Dallas Police Dept?")
   
   saveplot(p, name)
   message(sprintf("Saving %s", name))
