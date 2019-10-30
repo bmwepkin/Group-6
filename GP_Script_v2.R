@@ -132,8 +132,8 @@ df$age_group <- cut(df$Victim_Age, breaks = c(0, 19, 35, 55, 99),
 # Add Column as classifier of violent/nonviolent crime
 
 mat1 <- df$NIBRS_Crime_Category == "ASSAULT OFFENSES" | df$NIBRS_Crime_Category == "HOMICIDE OFFENSES"| df$NIBRS_Crime_Category == "ROBBERY"
-df$v_nv <- "Nonviolent"
-df$v_nv[mat1] <- "Violent"
+df$v_nv <- "NON-VIOLENT"
+df$v_nv[mat1] <- "VIOLENT"
 
 # create additional subsets of df
 violent_crime <- subset(
