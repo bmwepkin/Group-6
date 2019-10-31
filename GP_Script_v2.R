@@ -362,22 +362,53 @@ ggmap(dallas2)
 DallasMap2 <- ggmap(dallas2, base_layer = ggplot(aes(x = long, y = lat), data = violent_crime))
 d18 <- DallasMap2 + stat_density2d(aes(x = long, y = lat, fill = ..level.., alpha = ..level..), bins = I(5), geom = "polygon", data = violent_crime)+scale_fill_gradient2("Violent\nCrime\nDensity", low = "white", mid = "orange", high = "red", midpoint = 500)+ labs(x = "Longitude", y = "Latitude") + facet_wrap(~ Month) + scale_alpha(range = c(.2, .55), guide = FALSE) + ggtitle("Violent Crime Contour Map of Dallas by Month") + guides(fill = guide_colorbar(barwidth = 1.5, barheight = 10))
 
-#for brandon - code for slide 17
-#bmw-10/29/19 
-#temp <- ddply(violent_crime, .(NIBRS_Crime_Category, `Time_of_Occurrence`), summarise, count=length(`Time_of_Occurrence`))
-#g <- ggplot(temp, aes(fill= NIBRS_Crime_Category, y=count, x=`Time_of_Occurrence`)) + geom_bar(position="stack", stat="identity")
-temp <- ddply(violent_crime, .(NIBRS_Crime_Category, `Time_of_Occurrence`), summarise, count=length(`Time_of_Occurrence`))
-#g <- ggplot(temp, aes(fill= NIBRS_Crime_Category, y=count, x=`Time_of_Occurrence`)) + geom_bar(position="stack", stat="identity") 
-g <- ggplot(temp, aes(fill= NIBRS_Crime_Category, y=count, x=`Time_of_Occurrence`)) + geom_density(position="stack", stat="identity")
-g <- g + ggtitle("Violent Crime Count by Time of Occurance") + xlab("Time of Crime") + ylab("Number of Crimes")
-g <- g + facet_grid(rows = vars(NIBRS_Crime_Category)) + ylim(0, 75) + scale_fill_brewer(name = "NIBRS_Crime_Category", palette = "YlOrRd")
-g <- g + theme(legend.position = "none")
-g
-#bmw-10/29/19
-    
-#for brandon- code for slide 16
- temp <- ddply(violent_crime, .(NIBRS_Crime_Category, Day_of_the_Week), summarise, count=length(Date_of_Occurrence))
-f <- ggplot(temp, aes(fill= NIBRS_Crime_Category, y=count, x=Day_of_the_Week)) + geom_bar(position="stack", stat="identity")
-f <- f + scale_fill_brewer(name="OFFENSE")
-f <- f + ggtitle("Violent Crime by Day of Week")
+
+#bmw-10/30/19 
+#countourmapbymonth
+dallas2 <- get_map(location = "dallas", zoom = 14, color = "bw")
+ggmap(dallas2)
+DallasMap2 <- ggmap(dallas2, base_layer = ggplot(aes(x = long, y = lat), data = violent_crime))
+bw1 <- DallasMap2 + stat_density2d(aes(x = long, y = lat, fill = ..level.., alpha = ..level..), 
+  bins = I(5), geom = "polygon", data = violent_crime)+scale_fill_gradient2("Violent\nCrime\nDensity", 
+  low = "white", mid = "orange", high = "red", midpoint = 500)+ labs(x = "Longitude", y = "Latitude") + 
+  facet_wrap(~ Month) + scale_alpha(range = c(.2, .99), guide = FALSE) + 
+  ggtitle("Violent Crime Contour Map of Dallas by Month") + 
+  guides(fill = guide_colorbar(barwidth = 1.5, barheight = 10))
+bw1 <- bw1 + theme(axis.text = element_blank())
+bw1 <- bw1 + theme(axis.title = element_blank())
+bw1 <- bw1 + theme(axis.ticks = element_blank())
+bw1
+
+#Crime by time of day
+templab <- c("Assault","Murders","Robberies") #Format facet text to fit
+breaks <- (0:24)
+crime_name <- list(
+  'ASSAULT  OFFENSE' = "Assult",
+  'HOMICIDE OFFENSE' = "Murders",
+  'ROBBERY' = "Robberies"
+)
+crime_labeller <- function(variable, value){
+  return(crime_name[value])
+}
+bw2 <- qplot(Time_of_Occurrence, data = violent_crime, geom = "histogram", bins = 24,
+             #facets = NIBRS_Crime_Category ~ ., 
+             fill = NIBRS_Crime_Category)
+bw2 <- bw2 + facet_grid(NIBRS_Crime_Category ~ ., labeller = crime_labeller)
+bw2 <- bw2 + scale_fill_brewer(name = "NIBRS_Crime_Category", palette = "YlOrRd")
+bw2 <- bw2 + theme(legend.position = "none")
+bw2 <- bw2 + ylab("Number of Incidents")
+bw2 <- bw2 + xlab("Time of Day")
+bw2 <- bw2 + ggtitle("Crime Count by Time of Day")
+bw2 <- bw2 + scale_x_continuous(breaks = breaks)#not distributed
+bw2
+
+#Crime by Day of the week
+bw3 <- qplot(Day_of_the_Week, data = violent_crime, geom = "bar", #would prefer not stacked
+             fill = NIBRS_Crime_Category)
+bw3 <- bw3 + scale_fill_discrete("NIBRS \nCrime \nCategory", 
+  labels = c("Assault","Murders","Robberies")) #, palette  = "YlOrRd") #Palette not working
+bw3 <- bw3 + xlab("Day of the Week") + ylab("Number of Incidents")
+bw3 <- bw3 + ggtitle("Crimes by Day of the Week")
+bw3
+
 
