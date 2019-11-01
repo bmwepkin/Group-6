@@ -600,7 +600,7 @@ plotCrimeByDayoftheWeek <- function(df, name, flip = FALSE) {
     geom_col(position = "dodge") +
     scale_fill_brewer(palette = getMyPalette(), name = "Type", direction = -1, type = "qual") +
     xlab("Day") + 
-    ylab("No. of Incidents") +
+    ylab(NULL) +
     ggtitle("Violent Crimes by Days of the Week") +
     my_theme()
   
