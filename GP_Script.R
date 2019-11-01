@@ -599,7 +599,7 @@ plotCrimeByDayoftheWeek <- function(df, name, flip = FALSE) {
   p  <- ggplot(df, aes(x = Day_of_the_Week, y = num_incidents, fill = NIBRS_Crime_Category)) +
     geom_col(position = "dodge") +
     scale_fill_brewer(palette = getMyPalette(), name = "Type", direction = -1, type = "qual") +
-    xlab("Month") + 
+    xlab("Day") + 
     ylab("No. of Incidents") +
     ggtitle("Violent Crimes by Days of the Week") +
     my_theme()
