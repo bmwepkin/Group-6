@@ -68,14 +68,12 @@ my_theme <- function(title=FALSE, axis=FALSE, legendtitle=TRUE, legend=TRUE) {
   if (legend == FALSE) t <- t + theme(legend.position = "none")
   if (legendtitle == FALSE) t <- t + theme(legend.title = element_blank())
   
-  
   t
 }
 
-splitLatLongFromLocation <- function(dataframe = Police_Incidents) {
+splitLatLongFromLocation <- function(df) {
   message("Extracting Latitude and Longitude from Location1 Column")
   
-  df <- dataframe
   mat <- str_match(df$Location1, "\\((.*?), (.*?)\\)")
   df$lat <- as.double(mat[,2])
   df$long <- as.double(mat[,3])
@@ -122,10 +120,9 @@ filterRequiredColumns <- function(df) {
     df <- select(df, columns)
 }
 
-renameColumns <- function(dataframe = Police_Incidents) {
+renameColumns <- function(df) {
   message("Renaming Columns for easy access.")
-  
-  df <- dataframe
+
   names(df) <- gsub(" ", "_", names(df))
   names(df) <- gsub("Day1", "Day", names(df))
   names(df) <- gsub("Date1", "Date", names(df))
@@ -137,23 +134,8 @@ renameColumns <- function(dataframe = Police_Incidents) {
   df
 }
 
-getColumnswithLessNAs <- function(df, threshold) {
-  nas <- list()
-  for(i in names(df)) {
-    nas[[i]] <- sum(is.na(df[i]))
-  }
-  
-  nadf <- data.frame(names(nas), unlist(nas))
-  names(nadf) <- c("Name", "NACount")
-  nadf$Name <- as.character(nadf$Name)  # Convert to character from factor so as to get the filtered list
-  nadf <- filter(nadf, NACount < threshold)
-  
-  nadf$Name
-}
-
-convertDataTypes <- function(dataframe = Police_Incidents) {
+convertDataTypes <- function(df) {
   message("Coercing Columns...")
-  df <- dataframe
   
   df$NIBRS_Crime_Category <- factor(df$NIBRS_Crime_Category)
   df$Council_District <- factor(df$Council_District)
@@ -163,7 +145,6 @@ convertDataTypes <- function(dataframe = Police_Incidents) {
   df$Victim_Race <- factor(df$Victim_Race)
   df$Victim_Type <- factor(df$Victim_Type)
   
-
   df <- mutate(df, Division = recode(Division, "CENTRAL" = "Central", "NORTH CENTRAL" = "North Central", 
                                      "NORTHEAST" = "Northeast", "NORTHWEST" = "Northwest", 
                                      "SOUTH CENTRAL" = "South Central", "SOUTHEAST" = "Southeast", 
@@ -182,10 +163,9 @@ convertDataTypes <- function(dataframe = Police_Incidents) {
   df
 }
 
-factorHourofDay <- function(dataframe = Police_Incidents) {
+factorHourofDay <- function(df) {
   message("Factoring Day and Hour.")
-  df <- dataframe
-  
+
   df <- mutate(df, Day_of_the_Week = factor(Day_of_the_Week, levels = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")))
   df <- mutate(df, Hour = cut(Hour_of_the_Day, breaks = c(0, 4, 8, 12, 16, 20, 24), include.lowest = TRUE, right = TRUE, labels = c("F", "A", "B", "C", "D", "E")))
   df <- mutate(df, Hour = factor(Hour, levels = sort(levels(df$Hour))))
@@ -197,9 +177,8 @@ factorHourofDay <- function(dataframe = Police_Incidents) {
                                  "F" = "Mid Night (12AM - 4AM)"))  
 }
 
-factorVictimRace <- function(dataframe = Police_Incidents) {
+factorVictimRace <- function(df) {
   message("Factoring Race of victim.")
-  df <- dataframe
   
   df <- mutate(df, Victim_Race = recode(Victim_Race, "White" = "White", "Black" = "Black", "Hispanic or Latino" = "Hispanic/Latino", .default = "Other"))
   
@@ -216,100 +195,120 @@ factorVictimRace <- function(dataframe = Police_Incidents) {
   df
 }
 
-factorVictimAge <- function(dataframe = Police_Incidents) {
+factorVictimAge <- function(df) {
   message("Factoring Age groups of Victim.")
-  df <- dataframe
-  
+
   df <- mutate(df, Age_Group = cut(Victim_Age, breaks = c(0, 19, 35, 55, 99), 
                                    labels = c("Teenager", "Young Adult", "Middle Age", "Elderly")))  
   df
 }
 
-factorViolentCrimes <- function(dataframe = Police_Incidents) {
-  message("Factoring violent/nonviolent crime indicator.")  
-  df <- dataframe
+factorViolentCrimes <- function(df) {
+  message("Factoring Crime Categories and indicating Violent/Non-Violent Crime type.")  
+
+  df <- mutate(df, NIBRS_Crime_Category = recode(NIBRS_Crime_Category,  
+  "MISCELLANEOUS" = "Miscellaneous",
+  "LARCENY/ THEFT OFFENSES" = "Theft",
+  "ASSAULT OFFENSES" = "Assault",
+  "BURGLARY/ BREAKING & ENTERING" = "Burglary",
+  "ALL OTHER OFFENSES" = "Other",
+  "MOTOR VEHICLE THEFT" = "Motor Vehicle Theft",
+  "ROBBERY" = "Robbery",
+  "DESTRUCTION/ DAMAGE/ VANDALISM OF PROPERTY" = "Vandalism",
+  "TRESPASS OF REAL PROPERTY" = "Trespass",
+  "TRAFFIC VIOLATION - HAZARDOUS" = "Traffic Violations",
+  "COUNTERFEITING / FORGERY" = "Forgery",
+  "FAMILY OFFENSES, NONVIOLENT" = "Family Offenses",
+  "DISORDERLY CONDUCT" = "Disorderly Conduct",
+  "FRAUD OFFENSES" = "Fraud Offenses",
+  "DRIVING UNDER THE INFLUENCE" = "DUI Offenses",
+  "EMBEZZELMENT" = "Embezzelment",
+  "TRAFFIC VIOLATION - NON HAZARDOUS" = "Traffic Violations",
+  "DRUNKENNESS" = "Drunkenness",
+  "HOMICIDE OFFENSES" = "Homicide",
+  "ANIMAL OFFENSES" = "Animal Offenses",
+  "ARSON" = "Arson",
+  "WEAPON LAW VIOLATIONS" = "Weapon Law Violations",
+  "KIDNAPPING/ ABDUCTION" = "Abduction",
+  "DRUG/ NARCOTIC VIOLATIONS" = "Drug Violations",
+  "LIQUOR LAW VIOLATIONS" = "Liquor Law Violations",
+  "BRIBERY" = "Bribery",
+  "PORNOGRAPHY/ OBSCENE MATERIAL" = "Pornography"
+  ))
   
-  violentCrimes <- getViolentCrimeList()
+  df <- mutate(df, Violent_Crime_Category = NIBRS_Crime_Category)
   
-  df <- mutate(df, NIBRS_Crime_Category = recode(NIBRS_Crime_Category, "ASSAULT OFFENSES" = violentCrimes[1], 
-                                                 "HOMICIDE OFFENSES" = violentCrimes[2], 
-                                                 "ROBBERY" = violentCrimes[3], .default = "Other"))
+  violent_crimes_levels = getViolentCrimeList()
+  df <- mutate(df, Violent_Crime_Category = recode(Violent_Crime_Category, "Assault" = violent_crimes_levels[1], 
+                                                   "Homicide" = violent_crimes_levels[2], 
+                                                   "Robbery" = violent_crimes_levels[3] , .default = "Other"))
   
-  crime_levels = levels(df$NIBRS_Crime_Category)
-  df <- mutate(df, NIBRS_Crime_Category = factor(NIBRS_Crime_Category, 
+  crime_levels = levels(df$Violent_Crime_Category)
+  df <- mutate(df, Violent_Crime_Category = factor(Violent_Crime_Category, 
                                                  levels = c(sort(crime_levels[crime_levels != "Other"]), "Other")))
   
-  df <- mutate(df, Broad_Crime_Type = factor(ifelse(df$NIBRS_Crime_Category %in% violentCrimes, "Violent", "Non-Violent")))
+  df <- mutate(df, Broad_Crime_Type = factor(ifelse(Violent_Crime_Category %in% violent_crimes_levels, "Violent", "Non-Violent")))
 
   df
 }
 
-sub_vc_latlon <- function(dataframe = violent_crime){
-  message("Creating subset of violent_crime that has latitude and longitude values")
-  violent_crime <- dataframe
-  violent_crime_latlon <- violent_crime[is.na(violent_crime$lat) == FALSE, ]
-  violent_crime_latlon <- violent_crime[is.na(violent_crime$long) == FALSE, ]
+read_PoliceIncidents <- function(filename, year = NA, url) {
+  df <- NULL
   
-  violent_crime_latlon
-}
+  datafilename = filename
+  
+  filtered_file_exists <- FALSE
+  
+  if (!is.na(year)) {
+    # First check whether the filename exists by the year passed (ie., Police_Incidents_2018.csv)
+    filename_by_year <- sprintf("%s_%s.csv", filename, year)
+    if (file.exists(filename_by_year)) {
+      datafilename = filename_by_year
+      filtered_file_exists <- TRUE
+    }
+  }
+  
+  if (grepl(".csv", datafilename) == FALSE) {
+    datafilename <- sprintf("%s.csv", datafilename)
+  }
 
-getViolentCrimes <- function(df) {
-  violent_crime <- filter(df, NIBRS_Crime_Category %in% getViolentCrimeList())
-}
-
-read_PoliceIncidents_byYear_fromUrl <- function(url, year = ""){
+  # Check if the file to be read exists
+  if (!file.exists(datafilename)) {
+      # If the data is not available in the working directory, download it from the url
+      message ("Downloading Police Incidents file. This is a large file, the download may take several minutes...")
+      download.file(url, datafilename)
+      message ("Download complete. Reading Police Incidents file...")      
+  }
+  
+  # Once it reaches this point, the data is either available already in the working directory or downloaded now
   my_na <- c("", "0", "UNK", "G", "J", "None", "N", "Unknown", "NA")
   my_cols <- cols(`Hate Crime` = col_character(), `Victim Business Phone` = col_character(),
                   `Hate Crime Description` = col_character(), `Apartment Number` = col_character(),
                   `Victim Apartment` = col_character(), `Victim Zip Code` = col_character())
   
-  df <- NULL
-  datafilename <- "Police_Incidents.csv"
-  
-  message ("Downloading Police Incidents file. This is a large file, the download may take several minutes...")
-  download.file(url, datafilename)
-  message ("Download complete. Reading Police Incidents file...")
-  
+  message (sprintf("Reading Police Incidents file...%s", datafilename))
   df <- read_csv(datafilename, col_types = my_cols, na = my_na)
-  if(year != ""){
-    message(sprintf("Filtering to %s...", year))
-    df <- filter(df, `Year of Incident` == year)
+  
+  if (!is.na(year)) {
+    if (!filtered_file_exists) {
+      message(sprintf("Filtering to %s...", year))
+      df <- filter(df, `Year of Incident` == year)
+      
+      filename_by_year <- sprintf("%s_%s.csv", filename, year)
+      message(sprintf("Writing...%s", filename_by_year)) 
+      write_csv(df, filename_by_year)
+    }
   } else {
     message("Importing all years.")
-  }
-  
-  message("Completed loading data.")
-  df
-}
-
-read_PoliceIncidents_byYear <- function(year) {
-  my_na <- c("", "0", "UNK", "G", "J", "None", "N", "Unknown", "NA")
-  my_cols <- cols(`Hate Crime` = col_character(), `Victim Business Phone` = col_character(),
-                  `Hate Crime Description` = col_character(), `Apartment Number` = col_character(),
-                  `Victim Apartment` = col_character(), `Victim Zip Code` = col_character())
-  
-  df <- NULL
-  datafilename <- sprintf("Police_Incidents_%s.csv", year)
-  if (file.exists(datafilename)) {
-    message (sprintf("Reading Police Incidents file...%s", datafilename))
-    df <- read_csv(datafilename, col_types = my_cols, na = my_na)
-  } else {
-    message("Reading...Police_Incidents.csv")
-    df <- read_csv("Police_Incidents.csv", col_types = my_cols, na = my_na)
-    df <- filter(df, `Year of Incident` == year)
-    message(sprintf("Writing...%s", datafilename)) 
-    write_csv(df, datafilename)
-  }
-  
-  message("Completed loading data.")
+  } 
   
   df
 }
 
-create_response_time <- function(dataframe = Police_Incidents) {
+
+create_response_time <- function(df) {
   message("Creating response time values. Response time is the number of minutes from 911 call to police dispatch.") 
-  df <- dataframe
-  
+
   df <- mutate(df, Response_Time = as.numeric(difftime(df$Call_Dispatch_Date_Time, df$Call_Date_Time, units = "mins")))
   df <- mutate(df, Month = factor(months(df$Date_of_Occurrence, abbreviate = TRUE), levels = month.abb))
   df <- mutate(df, Day_of_Month = as.POSIXlt(df$Date_of_Occurrence)$mday)
@@ -320,11 +319,9 @@ create_response_time <- function(dataframe = Police_Incidents) {
   df
 }
 
-processPoliceIncidents <- function(dataframe = Police_Incidents, removeNAs = TRUE) {
+processPoliceIncidents <- function(df, removeNAs = TRUE) {
   message("Processing data...")
-  
-  df <- dataframe
-  
+
   df <- filterRequiredColumns(df)
   
   # columns <- c(getColumnswithLessNAs(df, 10000), "Victim Gender", "Victim Age", "Victim Ethnicity", "Victim Race")
@@ -357,27 +354,24 @@ processPoliceIncidents <- function(dataframe = Police_Incidents, removeNAs = TRU
 plotTopOffenses <- function(df, filename, n = 10, fwidth = 8) {
   message("Creating a plot of the top 10 offenses.") 
 
-  df_crime_category <- sort(table(df$NIBRS_Crime_Category), decreasing = TRUE)
-  df_crime_category <- data.frame(df_crime_category[df_crime_category > 100])
-  colnames(df_crime_category) <- c("Category", "Frequency")
-  df_crime_category$Percentage <- df_crime_category$Frequency / sum(df_crime_category$Frequency)
+  violent_crimes_levels = getViolentCrimeList()
   
-  mat2 <- df_crime_category$Category != "ALL OTHER OFFENSES" & df_crime_category$Category != "MISCELLANEOUS"
-  df_crime_category_top10 <- df[mat2, ]
-  df_crime_category_top10 <- df_crime_category_top10[1:n, ]
-  updated_levels <- c("Theft", "Dest. of Property", "Assault", "Motor Vehicle Theft", "Burglary",
-                      "Drunkenness", "Robbery", "Drug Violations", "Traffic Violations", "DUI Offenses")
-  levels(df_crime_category_top10$Category) <- c(levels(df_crime_category_top10$Category), updated_levels)
-  df_crime_category_top10$Category[1:n] <- c(updated_levels)
-  
-  p <- ggplot(df_crime_category_top10, aes(x=Category, y=Frequency, fill=Category)) + 
+  Crime_Categories <- data.frame(table(df$NIBRS_Crime_Category))
+  colnames(Crime_Categories) <- c("Category", "Frequency")
+
+  Crime_Categories <- Crime_Categories %>%
+                      filter(Frequency > 100) %>% 
+                      mutate(Percentage = scales::percent(Frequency/sum(Frequency))) %>%
+                      mutate(Broad_Crime_Type = factor(ifelse(Category %in% violent_crimes_levels, "Violent", "Non-Violent"))) %>% 
+                      filter(!(Category %in% c("Other", "Miscellaneous"))) %>%
+                      top_n(10, Frequency) %>%
+                      arrange(desc(Frequency))
+
+  p <- ggplot(Crime_Categories, aes(x=reorder(Category, -Frequency), y=Frequency, fill=Broad_Crime_Type)) + 
     geom_bar(stat="identity") + 
-    geom_text(nudge_y = -350, aes(label = Percent(Percentage)) +
-    ggtitle("Top 10 Offenses in 2018") +
-    scale_y_continuous(name = "Number of Incidents") +
-    my_theme() +
-    theme(axis.text.x=element_blank()) +
-    theme(axis.title.x = element_blank()))
+    scale_fill_brewer(palette = getMyPalette1()) +
+    my_theme(axis = TRUE, legendtitle = FALSE) +
+    theme(axis.text.x=element_text(angle = -45))
   
   saveplot(p, filename, width = fwidth)
   
@@ -413,7 +407,7 @@ plotTotalCrimesByDivision <- function(df, filename, fwidth = 8){
 plotViolentCrimesByMonth <- function(df, filename, fwidth = 8){
   message("Creating plot of violent crime by month")
 
-  p <- qplot(Month, data = df, geom = "bar", fill = NIBRS_Crime_Category) +
+  p <- qplot(Month, data = df, geom = "bar", fill = Violent_Crime_Category) +
       scale_fill_brewer(name = "Type", palette = getMyPalette1(), direction = -1) +
       my_theme(axis = TRUE)
   
@@ -426,7 +420,7 @@ plotViolentCrimesByMonth <- function(df, filename, fwidth = 8){
 plotViolentCrimesByDivision <- function(df, filename, fwidth = 8){
   message("Creating plot of violent crimes by division.")
   
-  p <- qplot(Division, data = df, geom = "bar", fill = NIBRS_Crime_Category) +
+  p <- qplot(Division, data = df, geom = "bar", fill = Violent_Crime_Category) +
     scale_fill_brewer(palette = getMyPalette1(), direction = -1) +
     theme(axis.text.x = element_text(angle = -45)) +
     theme(legend.title = element_blank()) +
@@ -442,15 +436,6 @@ plotResponseTime_InDifferentAspects <- function(df, year, suffix = "") {
   plotResponseTime(df, "Day_of_the_Week", paste("Reponse_By_DayofWeek", suffix, year, sep = "_"))
   plotResponseTime(df, "Day_of_Month", paste("Reponse_By_DayofMonth", suffix, year, sep = "_"))
   plotResponseTime(df, "Hour", paste("Reponse_By_HouroftheDay", suffix, year, sep = "_"), flip = TRUE)
-  
-  message("Completed plotting and saving Charts.")
-}
-
-plotResponseTime_InDifferentAspectsByCrime <- function(df, year, suffix = "") {
-  plotResponseTimeByCrime(df, "Month", paste("Reponse_By_Month", suffix, year, sep = "_"))
-  plotResponseTimeByCrime(df, "Day_of_the_Week", paste("Reponse_By_DayofWeek", suffix, year, sep = "_"))
-  plotResponseTimeByCrime(df, "Day_of_Month", paste("Reponse_By_DayofMonth", suffix, year, sep = "_"))
-  plotResponseTimeByCrime(df, "Hour", paste("Reponse_By_HouroftheDay", suffix, year, sep = "_"), flip = TRUE)
   
   message("Completed plotting and saving Charts.")
 }
@@ -481,27 +466,6 @@ plotResponseTime <- function(df, xcol, filename, flip = FALSE) {
   p
 }
 
-plotResponseTimeByCrime <- function(df, xcol, filename, flip = FALSE) {
-  df <- ungroup(df) %>%
-    group_by_(xcol, "NIBRS_Crime_Category") %>%
-    summarize(num_incidents = n(), med_response = median(Response_Time)) %>%
-    mutate(response = cut(med_response, breaks = quantile(med_response), include.lowest = TRUE, labels = c("Fastest", "Fast", "Slow", "Slowest")))
-  
-  p  <- ggplot(df, aes(x = df[[xcol]], y = num_incidents, fill = response)) +
-    geom_col(position = "dodge") +
-    scale_fill_brewer(palette = getMyPalette1(), name = "Response Time", direction = -1, type = "qual") +
-    xlab(gsub("_", " ", xcol)) + ylab("No. of Incidents") +
-    my_theme(axis = TRUE)
-  
-  if (flip == TRUE) {
-    p <- p + coord_flip()
-  }
-  
-  saveplot(p, filename)
-
-  df
-}
-
 plotResponseTimeByDivision <- function(df, filename, flip = FALSE) {
   totalIncidents <- nrow(df)
   
@@ -511,11 +475,12 @@ plotResponseTimeByDivision <- function(df, filename, flip = FALSE) {
     mutate(response = cut(med_response, breaks = quantile(med_response), include.lowest = TRUE, 
                           labels = c("Fastest", "Fast", "Slow", "Slowest")))
   
-  p  <- ggplot(df, aes(x = Division, y = num_incidents, fill = response)) +
+  p  <- ggplot(df, aes(x = reorder(Division, num_incidents), y = num_incidents, fill = response)) +
     geom_col(position = "dodge") +
     geom_text(nudge_y = -350, aes(label = share)) +
     scale_fill_brewer(palette = getMyPalette1(), name = "Response Time", direction = -1) +
-    my_theme() + theme(axis.text.x = element_text(angle = -45))
+    my_theme(axis = TRUE) +
+    theme(axis.text.x = element_text(angle = -45))
   
   if (flip == TRUE) {
     p <- p + coord_flip()
@@ -560,10 +525,10 @@ plotViolentCrimesByAgeGroup <- function(df, filename, flip = FALSE) {
   df <- filter(df, Victim_Age > 0, Victim_Age < 100)
   
   df <- ungroup(df) %>%
-    group_by(Age_Group, NIBRS_Crime_Category) %>%
+    group_by(Age_Group, Violent_Crime_Category) %>%
     summarize(num_incidents = n())
   
-  p  <- ggplot(df, aes(x = Age_Group, y = num_incidents, fill = NIBRS_Crime_Category)) +
+  p  <- ggplot(df, aes(x = Age_Group, y = num_incidents, fill = Violent_Crime_Category)) +
     geom_col(position = position_dodge2()) +
     scale_fill_brewer(palette = "YlOrRd", name = "Type", direction = -1, type = "qual") +
     my_theme()
@@ -582,7 +547,6 @@ plotAgeGroupByRace <- function(df, name, flip = FALSE) {
     group_by(Victim_Race, Age_Group) %>%
     summarize(num_incidents = n())
   
-  colors <- c("Other"="darkgray", "Black"="black", "Hispanic/Latino"="brown", "White"="white")
   p  <- ggplot(df, aes(x = Age_Group, y = num_incidents, fill = Victim_Race)) +
     geom_col(position = position_dodge2()) +
     scale_fill_brewer(palette = getMyPalette2(), name = "Race") +
@@ -602,10 +566,10 @@ plotViolentCrimesByAgeGroupAndGender <- function(df, name, flip = FALSE) {
   df <- filter(df, Victim_Age > 0, Victim_Age < 100)
   
   df <- ungroup(df) %>%
-    group_by(Age_Group, Victim_Gender, NIBRS_Crime_Category) %>%
+    group_by(Age_Group, Victim_Gender, Violent_Crime_Category) %>%
     summarize(num_incidents = n())
   
-  p  <- ggplot(df, aes(x = NIBRS_Crime_Category, y = num_incidents, fill = Victim_Gender)) +
+  p  <- ggplot(df, aes(x = Violent_Crime_Category, y = num_incidents, fill = Victim_Gender)) +
     geom_col(position = position_dodge2()) +
     facet_wrap(. ~ Age_Group) +
     scale_fill_brewer(palette = getMyPalette1(), name = "Gender", direction = 1) +
@@ -623,12 +587,12 @@ plotViolentCrimesByAgeGroupAndGender <- function(df, name, flip = FALSE) {
 
 plotByVictimRacesAsLollipop <- function(df, name, flip = FALSE) {
   df <- ungroup(df) %>%
-    group_by(Victim_Race, NIBRS_Crime_Category) %>%
+    group_by(Victim_Race, Violent_Crime_Category) %>%
     summarize(num_incidents = n())
   
   p  <- ggplot(df, aes(x = Victim_Race, y = num_incidents)) +
     geom_linerange(aes(x = Victim_Race, ymin=0, ymax=num_incidents, color = Victim_Race), size=1.5, position = position_dodge2(width = 0.85)) +
-    geom_point(position = position_dodge2(width = 0.85), aes(fill= NIBRS_Crime_Category), size=5, shape=21, stroke=1) +
+    geom_point(position = position_dodge2(width = 0.85), aes(fill= Violent_Crime_Category), size=5, shape=21, stroke=1) +
     scale_color_brewer(palette = getMyPalette2(), name = "Race") +
     scale_fill_brewer(palette = getMyPalette1(), name = "Type", direction = -1) +
     xlab("Race of Victim") + ylab("No. of Incidents") +
@@ -650,10 +614,10 @@ plotCrimeByTimeofDay <- function(df, name, flip = FALSE) {
   }
   
   df <- ungroup(df) %>%
-    group_by(Hour, NIBRS_Crime_Category) %>%
+    group_by(Hour, Violent_Crime_Category) %>%
     summarize(num_incidents = n())
   
-  p  <- ggplot(df, aes(x = Hour, y = num_incidents, fill = NIBRS_Crime_Category)) +
+  p  <- ggplot(df, aes(x = Hour, y = num_incidents, fill = Violent_Crime_Category)) +
     geom_col(position = "dodge") +
     scale_fill_brewer(palette = getMyPalette1(), name = "Type", direction = -1, type = "qual") +
     my_theme()
@@ -669,13 +633,13 @@ plotCrimeByTimeofDay <- function(df, name, flip = FALSE) {
 
 plotCrimeByDayoftheWeek <- function(df, name, flip = FALSE) {
   df <- ungroup(df) %>%
-    group_by(Day_of_the_Week, NIBRS_Crime_Category) %>%
+    group_by(Day_of_the_Week, Violent_Crime_Category) %>%
     summarize(num_incidents = n())
   
-  p  <- ggplot(df, aes(x = Day_of_the_Week, y = num_incidents, fill = NIBRS_Crime_Category)) +
+  p  <- ggplot(df, aes(x = Day_of_the_Week, y = num_incidents, fill = Violent_Crime_Category)) +
     geom_col(position = "dodge") +
     scale_fill_brewer(palette = getMyPalette1(), name = "Type", direction = -1, type = "qual") +
-    my_theme()
+    my_theme(axis = TRUE)
   
   if (flip == TRUE) {
     p <- p + coord_flip()
@@ -718,7 +682,7 @@ plotCrimeConcentrationMap <- function(df, filename) {
     stat_density2d(data = df, aes(x = long, y = lat, fill = ..level.., alpha =..level..), size = 0.2, bins = I(30), geom = "polygon") +
     geom_density2d(data = df, aes(x = long, y = lat), size = 0.3, color = I("red")) +
     scale_fill_gradient2("Violent\nCrime\nDensity", low = "orange", mid = "orange4", high = "orangered4", midpoint = 500) +
-    facet_wrap(~NIBRS_Crime_Category) +
+    facet_wrap(~Violent_Crime_Category) +
     guides(fill = guide_colorbar(barwidth = 1.5, barheight = 10)) +
     my_theme(legend = FALSE)
   
@@ -745,7 +709,7 @@ plotCrimeDensityMap <- function(df, filename) {
 plotCrimeDensityByMonthMap <- function(df, filename) {
   dallasmap <- get_map(location = "dallas", zoom = 14, color = "bw")
   
-  p <- ggmap(dallasmap, base_layer = ggplot(aes(x = long, y = lat), data = Violent_Crimes)) +
+  p <- ggmap(dallasmap, base_layer = ggplot(aes(x = long, y = lat), data = df)) +
     stat_density2d(data = df, aes(x = long, y = lat, fill = ..level.., alpha = ..level..), bins = I(5), geom = "polygon") +
     scale_fill_gradient2("Violent\nCrime\nDensity", low = "white", mid = "orange", high = "red", midpoint = 500) +
     labs(x = "Longitude", y = "Latitude") +
@@ -764,46 +728,42 @@ plotCrimeDensityByMonthMap <- function(df, filename) {
 main <- function() {
   # setupGoogleMaps("<API Key goes here>")
   
-  setupGoogleMaps("AIzaSyAuGTvZR1abbOcMQxutQt5127L8AXExQOo")
+  # setupGoogleMaps("AIzaSyAuGTvZR1abbOcMQxutQt5127L8AXExQOo")
   
-  # import and transform the data frame
   year <- 2018
   data_url <- "https://www.dallasopendata.com/api/views/qv6i-rri7/rows.csv"
-  
-  # Police_Incidents <- read_PoliceIncidents_byYear_fromUrl(url = data_url, year = year)
-  Police_Incidents <- read_PoliceIncidents_byYear(year = year)
-  
+
+  Police_Incidents <- read_PoliceIncidents("Police_Incidents", year, data_url)  # Provide filename with extn
+
   Police_Incidents <- processPoliceIncidents(Police_Incidents)
   
-  Violent_Crimes <- getViolentCrimes(Police_Incidents)
+  Violent_Crimes <- filter(Police_Incidents, Violent_Crime_Category %in% getViolentCrimeList())
   
   # Generate Various Plots covered in the slides
-  plotCrimeConcentrationMap(Violent_Crimes, "ViolentCrimeConcentration")
-  plotCrimeDensityMap(Violent_Crimes, "ViolentCrimeDensityMap")
-  plotCrimeDensityByMonthMap(Violent_Crimes, "ViolentCrimeDensityMap_ByMonth")
-  plotCrimeHeatMap(Violent_Crimes, "ViolentCrimeHeatMap")
-  
   plotTotalCrimes(Police_Incidents, "TotalCrimes")
+  plotTopOffenses(Police_Incidents, "Top_Offenses", fwidth = 8)
   plotViolentCrimesByMonth(Violent_Crimes, "ViolentCrimesByMonth")
   plotTotalCrimesByDivision(Police_Incidents, "TotalCrimesByDivision")
   plotViolentCrimesByDivision(Violent_Crimes, "ViolentCrimesByDivision")
-
-  # TODO - needs fixing
-  # top_10_offenses(Police_Incidents, "Top_Offenses", fwidth = 8)
+  
+  plotCrimeConcentrationMap(Violent_Crimes, "ViolentCrimeConcentration")
+  plotCrimeDensityMap(Violent_Crimes, "ViolentCrimeDensityMap")
+  plotCrimeHeatMap(Violent_Crimes, "ViolentCrimeHeatMap")
+  plotCrimeDensityByMonthMap(Violent_Crimes, "ViolentCrimeDensityMap_ByMonth")
+  
+  plotCrimeByDayoftheWeek(Violent_Crimes, paste("ViolentCrimesByDayoftheWeek", year, sep = "_"), FALSE)
+  plotCrimeByTimeofDay(Violent_Crimes, paste("ViolentCrimesByTimeofDay", year, sep = "_"), TRUE)
+  plotResidentsByDivisions(Police_Incidents, "ResidentsByDivision")
 
   plotResponseTime_InDifferentAspects(Police_Incidents, year)
   plotResponseTime_InDifferentAspects(Violent_Crimes, year, "Violent")
-  plotResponseTimeByDivision(Police_Incidents, "", "ResponseByDivision")
+  plotResponseTimeByDivision(Police_Incidents, "ResponseByDivision")
   plotHourlyResponseTimeByDivision(Police_Incidents, "HourlyResponseByDivision", TRUE)
 
-  plotViolentCrimesByAgeGroup(Violent_Crimes, paste("CrimesByAgeGroup", year, sep = "_"))
   plotByVictimRacesAsLollipop(Violent_Crimes, paste("CrimesByRace", year, sep = "_"), FALSE)
+  plotViolentCrimesByAgeGroup(Violent_Crimes, paste("CrimesByAgeGroup", year, sep = "_"))
   plotViolentCrimesByAgeGroupAndGender(Violent_Crimes, paste("CrimesByGender", year, sep = "_"))
   plotAgeGroupByRace(Police_Incidents, paste("RaceByAgeGroup", year, sep = "_"))
-
-  plotCrimeByTimeofDay(Violent_Crimes, paste("ViolentCrimesByTimeofDay", year, sep = "_"), TRUE)
-  plotCrimeByDayoftheWeek(Violent_Crimes, paste("ViolentCrimesByDayoftheWeek", year, sep = "_"), FALSE)
-  plotResidentsByDivisions(Police_Incidents, "ResidentsByDivision")
 }
 
-# main()
+main()
