@@ -82,12 +82,24 @@ splitLatLongFromLocation <- function(df) {
 }
 
 setupGoogleMaps <- function(api_key=NA) {
-  message("Please provide an API Key for Google Maps to proceed.")
-  # stop(is.na(api_key) == TRUE)
+  if (is.na(api_key) == TRUE) {
+    stop("Please provide an API Key for Google Maps to proceed.")  
+  }
+  
+  my.err.handler <- function(error) error
+  my.war.handler <- function(warning) warning
   
   require(devtools)
   devtools::install_github("dkahle/ggmap", ref = "tidyup")
+  
   register_google(key=api_key)
+  
+  # Try to get a map to see if it goes through
+  result <- tryCatch(get_map(location = "dallas", zoom = 14, color = "bw"), error = my.err.handler, warning = my.war.handler)
+  
+  if (is.list(result)) { # If Warning did occur then coerced_n will be a list
+    stop(sprintf("Failed to load the map from Google, may be due to an incorrect API key.\n %s", result$message))
+  }
 }
 
 ####Data Functions####
@@ -253,6 +265,11 @@ factorViolentCrimes <- function(df) {
 }
 
 read_PoliceIncidents <- function(filename, year = NA, url) {
+# This function first looks for the filtered version of the data (per year) in the working directory, if not found
+# then looks for the original unaltered version of the data. If that is not found as well, then attempts to download
+# it from the url provided.
+# This is mainly to prevent the wait time.
+  
   df <- NULL
   
   datafilename = filename
@@ -324,9 +341,6 @@ processPoliceIncidents <- function(df, removeNAs = TRUE) {
 
   df <- filterRequiredColumns(df)
   
-  # columns <- c(getColumnswithLessNAs(df, 10000), "Victim Gender", "Victim Age", "Victim Ethnicity", "Victim Race")
-  # df <- select (df, columns)
-  
   # Filter all the rows that has NA
   if (removeNAs == TRUE) {
     df <- df[complete.cases(df), ]
@@ -383,7 +397,7 @@ plotTotalCrimes <- function(df, filename, fwidth = 8) {
 
   p <- qplot(Month, data = df, geom = "bar", fill = Broad_Crime_Type) +
       scale_fill_brewer(palette = getMyPalette1()) +
-      my_theme(axis = TRUE, legend = FALSE)
+      my_theme(axis = TRUE, legendtitle = FALSE)
 
   saveplot(p, filename, width = fwidth)
   
@@ -395,10 +409,9 @@ plotTotalCrimesByDivision <- function(df, filename, fwidth = 8){
   
   p <- qplot(Division, data = df, geom = "bar", fill = Broad_Crime_Type) +
     scale_fill_brewer(palette = getMyPalette1()) +
-    theme(axis.text.x = element_text(angle = -45)) +
-    theme(legend.title = element_blank()) +
-    my_theme(axis = TRUE)
-  
+    my_theme(axis = TRUE, legendtitle = FALSE) +
+    theme(axis.text.x = element_text(angle = -45))
+    
   saveplot(p, filename, width = fwidth)
   
   p
@@ -415,7 +428,6 @@ plotViolentCrimesByMonth <- function(df, filename, fwidth = 8){
   
   p
 }
-
 
 plotViolentCrimesByDivision <- function(df, filename, fwidth = 8){
   message("Creating plot of violent crimes by division.")
@@ -436,16 +448,9 @@ plotResponseTime_InDifferentAspects <- function(df, year, suffix = "") {
   plotResponseTime(df, "Day_of_the_Week", paste("Reponse_By_DayofWeek", suffix, year, sep = "_"))
   plotResponseTime(df, "Day_of_Month", paste("Reponse_By_DayofMonth", suffix, year, sep = "_"))
   plotResponseTime(df, "Hour", paste("Reponse_By_HouroftheDay", suffix, year, sep = "_"), flip = TRUE)
-  
-  message("Completed plotting and saving Charts.")
 }
 
 plotResponseTime <- function(df, xcol, filename, flip = FALSE) {
-  # Reverse the Levels to start from Early Morning when flipped
-  # if (flip == TRUE) {
-  #   df[xcol] <- factor(xcol, rev(levels(df[[xcol]])))
-  # }
-
   df <- ungroup(df) %>%
     group_by_(xcol) %>%
     summarize(num_incidents = n(), med_response = median(Response_Time)) %>%
@@ -531,16 +536,18 @@ plotViolentCrimesByAgeGroup <- function(df, filename, flip = FALSE) {
   p  <- ggplot(df, aes(x = Age_Group, y = num_incidents, fill = Violent_Crime_Category)) +
     geom_col(position = position_dodge2()) +
     scale_fill_brewer(palette = "YlOrRd", name = "Type", direction = -1, type = "qual") +
-    my_theme()
+    my_theme(axis = TRUE)
   
-  p <- p + coord_flip()
+  if (flip == TRUE) {
+    p <- p + coord_flip()
+  }
   
   saveplot(p, filename)
 
   p
 }
 
-plotAgeGroupByRace <- function(df, name, flip = FALSE) {
+plotAgeGroupByRace <- function(df, filename, flip = FALSE) {
   df <- filter(df, Victim_Age > 0, Victim_Age < 100)
   
   df <- ungroup(df) %>%
@@ -550,19 +557,19 @@ plotAgeGroupByRace <- function(df, name, flip = FALSE) {
   p  <- ggplot(df, aes(x = Age_Group, y = num_incidents, fill = Victim_Race)) +
     geom_col(position = position_dodge2()) +
     scale_fill_brewer(palette = getMyPalette2(), name = "Race") +
-    xlab(gsub("_", " ", "Age_Group")) + ylab("No. of Incidents") +
-    my_theme()
+    xlab("Age Group") + ylab("No. of Incidents") +
+    my_theme(axis = TRUE)
   
   if (flip == TRUE) {
     p <- p + coord_flip()
   }
   
-  saveplot(p, name)
+  saveplot(p, filename)
 
   p
 }
 
-plotViolentCrimesByAgeGroupAndGender <- function(df, name, flip = FALSE) {
+plotViolentCrimesByAgeGroupAndGender <- function(df, filename, flip = FALSE) {
   df <- filter(df, Victim_Age > 0, Victim_Age < 100)
   
   df <- ungroup(df) %>%
@@ -573,19 +580,19 @@ plotViolentCrimesByAgeGroupAndGender <- function(df, name, flip = FALSE) {
     geom_col(position = position_dodge2()) +
     facet_wrap(. ~ Age_Group) +
     scale_fill_brewer(palette = getMyPalette1(), name = "Gender", direction = 1) +
-    my_theme()
+    my_theme(axis = TRUE)
   
   if (flip == TRUE) {
     p <- p + coord_flip()
   }
   
-  saveplot(p, name)
+  saveplot(p, filename)
 
   p
 }
 
 
-plotByVictimRacesAsLollipop <- function(df, name, flip = FALSE) {
+plotByVictimRacesAsLollipop <- function(df, filename, flip = FALSE) {
   df <- ungroup(df) %>%
     group_by(Victim_Race, Violent_Crime_Category) %>%
     summarize(num_incidents = n())
@@ -596,18 +603,18 @@ plotByVictimRacesAsLollipop <- function(df, name, flip = FALSE) {
     scale_color_brewer(palette = getMyPalette2(), name = "Race") +
     scale_fill_brewer(palette = getMyPalette1(), name = "Type", direction = -1) +
     xlab("Race of Victim") + ylab("No. of Incidents") +
-    my_theme()
+    my_theme(axis = TRUE)
   
   if (flip == TRUE) {
     p <- p + coord_flip()
   }
   
-  saveplot(p, name)
+  saveplot(p, filename)
   
   p
 }
 
-plotCrimeByTimeofDay <- function(df, name, flip = FALSE) {
+plotCrimeByTimeofDay <- function(df, filename, flip = FALSE) {
   # Reverse the Levels to start from Early Morning when flipped
   if (flip == TRUE) {
     df <- mutate(df, Hour = factor(Hour, rev(levels(Hour))))
@@ -620,24 +627,25 @@ plotCrimeByTimeofDay <- function(df, name, flip = FALSE) {
   p  <- ggplot(df, aes(x = Hour, y = num_incidents, fill = Violent_Crime_Category)) +
     geom_col(position = "dodge") +
     scale_fill_brewer(palette = getMyPalette1(), name = "Type", direction = -1, type = "qual") +
-    my_theme()
+    my_theme(axis = TRUE)
   
   if (flip == TRUE) {
     p <- p + coord_flip()
   }
   
-  saveplot(p, name)
+  saveplot(p, filename)
 
   p
 }
 
-plotCrimeByDayoftheWeek <- function(df, name, flip = FALSE) {
+plotCrimeByDayoftheWeek <- function(df, filename, flip = FALSE) {
   df <- ungroup(df) %>%
     group_by(Day_of_the_Week, Violent_Crime_Category) %>%
     summarize(num_incidents = n())
   
   p  <- ggplot(df, aes(x = Day_of_the_Week, y = num_incidents, fill = Violent_Crime_Category)) +
     geom_col(position = "dodge") +
+    scale_y_continuous(breaks = 250*(0:5)) +
     scale_fill_brewer(palette = getMyPalette1(), name = "Type", direction = -1, type = "qual") +
     my_theme(axis = TRUE)
   
@@ -645,21 +653,21 @@ plotCrimeByDayoftheWeek <- function(df, name, flip = FALSE) {
     p <- p + coord_flip()
   }
   
-  saveplot(p, name)
+  saveplot(p, filename)
 
   p
 }
 
 plotResidentsByDivisions <- function(df, filename) {
-    p <- qplot(Division, data = df, geom = "bar", fill = Resident) +
-        scale_fill_brewer(palette = getMyPalette1()) +
-        my_theme(axis = TRUE, legendtitle = FALSE) +
-        theme(axis.text.x = element_text(angle = -45)) +
-        theme(axis.ticks.x = element_blank())
+  p <- qplot(Division, data = df, geom = "bar", fill = Resident) +
+      scale_fill_brewer(palette = getMyPalette1()) +
+      my_theme(axis = TRUE, legendtitle = FALSE) +
+      theme(axis.text.x = element_text(angle = -45)) +
+      theme(axis.ticks.x = element_blank())
 
-    saveplot(p, filename)
-    
-    p
+  saveplot(p, filename)
+  
+  p
 }
 
 plotCrimeHeatMap <- function(df, filename) {
@@ -725,45 +733,45 @@ plotCrimeDensityByMonthMap <- function(df, filename) {
 
 
 ####Main####
-main <- function() {
-  # setupGoogleMaps("<API Key goes here>")
-  
-  # setupGoogleMaps("AIzaSyAuGTvZR1abbOcMQxutQt5127L8AXExQOo")
-  
-  year <- 2018
-  data_url <- "https://www.dallasopendata.com/api/views/qv6i-rri7/rows.csv"
 
-  Police_Incidents <- read_PoliceIncidents("Police_Incidents", year, data_url)  # Provide filename with extn
+# setupGoogleMaps("<API Key goes here>")
 
-  Police_Incidents <- processPoliceIncidents(Police_Incidents)
-  
-  Violent_Crimes <- filter(Police_Incidents, Violent_Crime_Category %in% getViolentCrimeList())
-  
-  # Generate Various Plots covered in the slides
-  plotTotalCrimes(Police_Incidents, "TotalCrimes")
-  plotTopOffenses(Police_Incidents, "Top_Offenses", fwidth = 8)
-  plotViolentCrimesByMonth(Violent_Crimes, "ViolentCrimesByMonth")
-  plotTotalCrimesByDivision(Police_Incidents, "TotalCrimesByDivision")
-  plotViolentCrimesByDivision(Violent_Crimes, "ViolentCrimesByDivision")
-  
-  plotCrimeConcentrationMap(Violent_Crimes, "ViolentCrimeConcentration")
-  plotCrimeDensityMap(Violent_Crimes, "ViolentCrimeDensityMap")
-  plotCrimeHeatMap(Violent_Crimes, "ViolentCrimeHeatMap")
-  plotCrimeDensityByMonthMap(Violent_Crimes, "ViolentCrimeDensityMap_ByMonth")
-  
-  plotCrimeByDayoftheWeek(Violent_Crimes, paste("ViolentCrimesByDayoftheWeek", year, sep = "_"), FALSE)
-  plotCrimeByTimeofDay(Violent_Crimes, paste("ViolentCrimesByTimeofDay", year, sep = "_"), TRUE)
-  plotResidentsByDivisions(Police_Incidents, "ResidentsByDivision")
+setupGoogleMaps("AIzaSyAuGTvZR1abbOcMQxutQt5127L8AXExQOo")
 
-  plotResponseTime_InDifferentAspects(Police_Incidents, year)
-  plotResponseTime_InDifferentAspects(Violent_Crimes, year, "Violent")
-  plotResponseTimeByDivision(Police_Incidents, "ResponseByDivision")
-  plotHourlyResponseTimeByDivision(Police_Incidents, "HourlyResponseByDivision", TRUE)
+# Supply the year to be analyzed
+year <- 2018
 
-  plotByVictimRacesAsLollipop(Violent_Crimes, paste("CrimesByRace", year, sep = "_"), FALSE)
-  plotViolentCrimesByAgeGroup(Violent_Crimes, paste("CrimesByAgeGroup", year, sep = "_"))
-  plotViolentCrimesByAgeGroupAndGender(Violent_Crimes, paste("CrimesByGender", year, sep = "_"))
-  plotAgeGroupByRace(Police_Incidents, paste("RaceByAgeGroup", year, sep = "_"))
-}
+data_url <- "https://www.dallasopendata.com/api/views/qv6i-rri7/rows.csv"
 
-main()
+Police_Incidents <- read_PoliceIncidents("Police_Incidents", year, data_url)  # Provide filename with extn
+
+Police_Incidents <- processPoliceIncidents(Police_Incidents)
+
+Violent_Crimes <- filter(Police_Incidents, Violent_Crime_Category %in% getViolentCrimeList())
+
+# Generate Various Plots covered in the slides
+plotTotalCrimes(Police_Incidents, paste("TotalCrimes", year, sep = "_"))
+plotTopOffenses(Police_Incidents, paste("Top_Offenses", year, sep = "_"), fwidth = 8)
+plotViolentCrimesByMonth(Violent_Crimes, paste("ViolentCrimesByMonth", year, sep = "_"))
+plotTotalCrimesByDivision(Police_Incidents, paste("TotalCrimesByDivision", year, sep = "_"))
+plotViolentCrimesByDivision(Violent_Crimes, paste("ViolentCrimesByDivision", year, sep = "_"))
+
+plotCrimeConcentrationMap(Violent_Crimes, paste("ViolentCrimeConcentration", year, sep = "_"))
+plotCrimeDensityMap(Violent_Crimes, paste("ViolentCrimeDensityMap", year, sep = "_"))
+plotCrimeHeatMap(Violent_Crimes, paste("ViolentCrimeHeatMap", year, sep = "_"))
+plotCrimeDensityByMonthMap(Violent_Crimes, paste("ViolentCrimeDensityMap_ByMonth", year, sep = "_"))
+
+plotCrimeByDayoftheWeek(Violent_Crimes, paste("ViolentCrimesByDayoftheWeek", year, sep = "_"), FALSE)
+plotCrimeByTimeofDay(Violent_Crimes, paste("ViolentCrimesByTimeofDay", year, sep = "_"), TRUE)
+plotResidentsByDivisions(Police_Incidents, paste("ResidentsByDivision", year, sep = "_"))
+
+plotResponseTime_InDifferentAspects(Police_Incidents, year)
+plotResponseTime_InDifferentAspects(Violent_Crimes, year, "Violent")
+plotResponseTimeByDivision(Police_Incidents, paste("ResponseByDivision", year, sep = "_"))
+plotHourlyResponseTimeByDivision(Police_Incidents, paste("HourlyResponseByDivision", year, sep = "_"), TRUE)
+
+plotByVictimRacesAsLollipop(Violent_Crimes, paste("CrimesByRace", year, sep = "_"))
+plotViolentCrimesByAgeGroup(Violent_Crimes, paste("CrimesByAgeGroup", year, sep = "_"), TRUE)
+plotViolentCrimesByAgeGroupAndGender(Violent_Crimes, paste("CrimesByGender", year, sep = "_"), TRUE)
+plotAgeGroupByRace(Police_Incidents, paste("RaceByAgeGroup", year, sep = "_"), TRUE)
+message("Successfully completed generating all charts.")
