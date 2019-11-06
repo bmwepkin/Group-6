@@ -2,7 +2,8 @@
 # use install.packages(c("readr", "plyr", "dplyr", "reshape2", "ggplot2", "stringr", "ggrepel", "devtools", "ggmap", "compstatr")) 
 # to install the necessary packages
 
-####Load Libraries####
+####Libraries####
+
 library(readr)
 library(plyr)
 library(reshape2)
@@ -31,6 +32,7 @@ library(ggmap)
 #' }
 
 ####Utility Functions####
+
 getMyPalette1 <- function() {
   "YlOrRd"
 }
@@ -88,9 +90,6 @@ setupGoogleMaps <- function(api_key=NA) {
   
   my.err.handler <- function(error) error
   my.war.handler <- function(warning) warning
-  
-  require(devtools)
-  devtools::install_github("dkahle/ggmap", ref = "tidyup")
   
   register_google(key=api_key)
   
@@ -346,8 +345,6 @@ processPoliceIncidents <- function(df, removeNAs = TRUE) {
     df <- df[complete.cases(df), ]
   }
   
-  message(sprintf("Cleaned up the data and the final number of rows are : %s", nrow(df)))
-
   df <- df %>%  
     splitLatLongFromLocation() %>% 
     renameColumns() %>%
@@ -357,16 +354,48 @@ processPoliceIncidents <- function(df, removeNAs = TRUE) {
     factorViolentCrimes() %>% 
     factorVictimRace() %>% 
     factorVictimAge()
+  
+  message(sprintf("Cleaned up the data and the final number of rows are : %s", nrow(df)))
 
   message("Processing Complete.")
   
   df
 }
 
-####Plot Functions#### 
+####Plot Functions####
+
+plotResponseTime <- function(df, xcol, filename, flip = FALSE) {
+  df <- ungroup(df) %>%
+    group_by_(xcol) %>%
+    summarize(num_incidents = n(), med_response = median(Response_Time)) %>%
+    mutate(response = cut(med_response, breaks = quantile(med_response), include.lowest = TRUE, labels = c("Fastest", "Fast", "Slow", "Slowest")))
+  
+  p  <- ggplot(df, aes(x = df[[xcol]], y = num_incidents, fill = response)) +
+    geom_col(position = "dodge") +
+    scale_fill_brewer(palette = getMyPalette1(), name = "Response Time", direction = -1, type = "qual") +
+    xlab(gsub("_", " ", xcol)) + ylab("No. of Incidents") +
+    my_theme(axis = TRUE)
+  
+  if (flip == TRUE) {
+    p <- p + coord_flip()
+  }
+  
+  saveplot(p, filename)
+  
+  p
+}
+
+plotResponseTime_InDifferentAspects <- function(df, year, suffix = "") {
+  message(sprintf("Creating various plots of Response Times.", n))
+  
+  plotResponseTime(df, "Month", paste("Reponse_By_Month", suffix, year, sep = "_"))
+  plotResponseTime(df, "Day_of_the_Week", paste("Reponse_By_DayofWeek", suffix, year, sep = "_"))
+  plotResponseTime(df, "Day_of_Month", paste("Reponse_By_DayofMonth", suffix, year, sep = "_"))
+  plotResponseTime(df, "Hour", paste("Reponse_By_HouroftheDay", suffix, year, sep = "_"), flip = TRUE)
+}
 
 plotTopOffenses <- function(df, filename, n = 10, fwidth = 8) {
-  message("Creating a plot of the top 10 offenses.") 
+  message(sprintf("Creating a plot of the Top %s offenses.", n))
 
   violent_crimes_levels = getViolentCrimeList()
   
@@ -393,7 +422,7 @@ plotTopOffenses <- function(df, filename, n = 10, fwidth = 8) {
 } 
 
 plotTotalCrimes <- function(df, filename, fwidth = 8) {
-  message("Creating plot of total police incidents by month.")
+  message("Creating a plot of total police incidents by Month.")
 
   p <- qplot(Month, data = df, geom = "bar", fill = Broad_Crime_Type) +
       scale_fill_brewer(palette = getMyPalette1()) +
@@ -405,7 +434,7 @@ plotTotalCrimes <- function(df, filename, fwidth = 8) {
 }
 
 plotTotalCrimesByDivision <- function(df, filename, fwidth = 8){
-  message("Creating plot of total police incidents by division.")
+  message("Creating a plot of total police incidents by Division.")
   
   p <- qplot(Division, data = df, geom = "bar", fill = Broad_Crime_Type) +
     scale_fill_brewer(palette = getMyPalette1()) +
@@ -418,7 +447,7 @@ plotTotalCrimesByDivision <- function(df, filename, fwidth = 8){
 }
 
 plotViolentCrimesByMonth <- function(df, filename, fwidth = 8){
-  message("Creating plot of violent crime by month")
+  message("Creating a plot of violent crime by Month.")
 
   p <- qplot(Month, data = df, geom = "bar", fill = Violent_Crime_Category) +
       scale_fill_brewer(name = "Type", palette = getMyPalette1(), direction = -1) +
@@ -430,7 +459,7 @@ plotViolentCrimesByMonth <- function(df, filename, fwidth = 8){
 }
 
 plotViolentCrimesByDivision <- function(df, filename, fwidth = 8){
-  message("Creating plot of violent crimes by division.")
+  message("Creating a plot of violent crimes by Division.")
   
   p <- qplot(Division, data = df, geom = "bar", fill = Violent_Crime_Category) +
     scale_fill_brewer(palette = getMyPalette1(), direction = -1) +
@@ -443,35 +472,9 @@ plotViolentCrimesByDivision <- function(df, filename, fwidth = 8){
   p
 }
 
-plotResponseTime_InDifferentAspects <- function(df, year, suffix = "") {
-  plotResponseTime(df, "Month", paste("Reponse_By_Month", suffix, year, sep = "_"))
-  plotResponseTime(df, "Day_of_the_Week", paste("Reponse_By_DayofWeek", suffix, year, sep = "_"))
-  plotResponseTime(df, "Day_of_Month", paste("Reponse_By_DayofMonth", suffix, year, sep = "_"))
-  plotResponseTime(df, "Hour", paste("Reponse_By_HouroftheDay", suffix, year, sep = "_"), flip = TRUE)
-}
-
-plotResponseTime <- function(df, xcol, filename, flip = FALSE) {
-  df <- ungroup(df) %>%
-    group_by_(xcol) %>%
-    summarize(num_incidents = n(), med_response = median(Response_Time)) %>%
-    mutate(response = cut(med_response, breaks = quantile(med_response), include.lowest = TRUE, labels = c("Fastest", "Fast", "Slow", "Slowest")))
-  
-  p  <- ggplot(df, aes(x = df[[xcol]], y = num_incidents, fill = response)) +
-    geom_col(position = "dodge") +
-    scale_fill_brewer(palette = getMyPalette1(), name = "Response Time", direction = -1, type = "qual") +
-    xlab(gsub("_", " ", xcol)) + ylab("No. of Incidents") +
-    my_theme(axis = TRUE)
-  
-  if (flip == TRUE) {
-    p <- p + coord_flip()
-  }
-  
-  saveplot(p, filename)
-  
-  p
-}
-
 plotResponseTimeByDivision <- function(df, filename, flip = FALSE) {
+  message("Creating a plot of Response Times by Division.")
+  
   totalIncidents <- nrow(df)
   
   df <- ungroup(df) %>%
@@ -497,6 +500,8 @@ plotResponseTimeByDivision <- function(df, filename, flip = FALSE) {
 }
 
 plotHourlyResponseTimeByDivision <- function(df, filename, flip = FALSE) {
+  message("Creating a plot of Hourly Response Times by Division.")
+  
   # Reverse the Levels to start from Early Morning when flipped
   if (flip == TRUE) {
     df <- mutate(df, Hour = factor(Hour, rev(levels(Hour))))
@@ -527,6 +532,8 @@ plotHourlyResponseTimeByDivision <- function(df, filename, flip = FALSE) {
 }
 
 plotViolentCrimesByAgeGroup <- function(df, filename, flip = FALSE) {
+  message("Creating a plot of Violent Crimes by Age Group.")
+  
   df <- filter(df, Victim_Age > 0, Victim_Age < 100)
   
   df <- ungroup(df) %>%
@@ -548,6 +555,8 @@ plotViolentCrimesByAgeGroup <- function(df, filename, flip = FALSE) {
 }
 
 plotAgeGroupByRace <- function(df, filename, flip = FALSE) {
+  message("Creating a plot of Age Groups by Race.")
+  
   df <- filter(df, Victim_Age > 0, Victim_Age < 100)
   
   df <- ungroup(df) %>%
@@ -570,6 +579,8 @@ plotAgeGroupByRace <- function(df, filename, flip = FALSE) {
 }
 
 plotViolentCrimesByAgeGroupAndGender <- function(df, filename, flip = FALSE) {
+  message("Creating a plot of Violent Crimes by Age Group and Gender.")
+  
   df <- filter(df, Victim_Age > 0, Victim_Age < 100)
   
   df <- ungroup(df) %>%
@@ -591,8 +602,9 @@ plotViolentCrimesByAgeGroupAndGender <- function(df, filename, flip = FALSE) {
   p
 }
 
-
 plotByVictimRacesAsLollipop <- function(df, filename, flip = FALSE) {
+  message("Creating a lollipop plot of Victim's Race.")
+  
   df <- ungroup(df) %>%
     group_by(Victim_Race, Violent_Crime_Category) %>%
     summarize(num_incidents = n())
@@ -615,6 +627,8 @@ plotByVictimRacesAsLollipop <- function(df, filename, flip = FALSE) {
 }
 
 plotCrimeByTimeofDay <- function(df, filename, flip = FALSE) {
+  message("Creating a plot of Crimes by Time of day.")
+  
   # Reverse the Levels to start from Early Morning when flipped
   if (flip == TRUE) {
     df <- mutate(df, Hour = factor(Hour, rev(levels(Hour))))
@@ -639,6 +653,8 @@ plotCrimeByTimeofDay <- function(df, filename, flip = FALSE) {
 }
 
 plotCrimeByDayoftheWeek <- function(df, filename, flip = FALSE) {
+  message("Creating a plot of Crimes by Day of the week.")
+  
   df <- ungroup(df) %>%
     group_by(Day_of_the_Week, Violent_Crime_Category) %>%
     summarize(num_incidents = n())
@@ -659,6 +675,8 @@ plotCrimeByDayoftheWeek <- function(df, filename, flip = FALSE) {
 }
 
 plotResidentsByDivisions <- function(df, filename) {
+  message("Creating a plot of Residents by Division.")
+  
   p <- qplot(Division, data = df, geom = "bar", fill = Resident) +
       scale_fill_brewer(palette = getMyPalette1()) +
       my_theme(axis = TRUE, legendtitle = FALSE) +
@@ -671,8 +689,12 @@ plotResidentsByDivisions <- function(df, filename) {
 }
 
 plotCrimeHeatMap <- function(df, filename) {
-  map_dallas_sat <- get_map('Dallas', zoom = 12, maptype = 'satellite')
-  p <- ggmap(map_dallas_sat) + stat_density2d(data = df, aes(x = long, y = lat, fill = ..density..), geom = 'tile', contour = F, alpha = .5) +
+  message("Creating a plot of Heat map of Crimes.")
+  
+  dallasmap <- get_map('Dallas', zoom = 12, maptype = 'satellite')
+  
+  p <- ggmap(dallasmap) + 
+      stat_density2d(data = df, aes(x = long, y = lat, fill = ..density..), geom = 'tile', contour = F, alpha = .5) +
       scale_fill_viridis_c(option = "inferno") +
       labs(fill = str_c('No. of', '\nIncidents')) +
       my_theme() +
@@ -684,6 +706,8 @@ plotCrimeHeatMap <- function(df, filename) {
 }
 
 plotCrimeConcentrationMap <- function(df, filename) {
+  message("Creating a plot of Concentration of Crimes.")
+  
   dallasmap <- get_map("dallas", zoom = 10, scale = 2,maptype ='terrain',color = 'color')
 
   p <- ggmap(dallasmap) + 
@@ -700,6 +724,8 @@ plotCrimeConcentrationMap <- function(df, filename) {
 }
 
 plotCrimeDensityMap <- function(df, filename) {
+  message("Creating a plot of Density of Crimes.")
+  
   dallasmap <- get_map("dallas", zoom = 14)
   
   p <- ggmap(dallasmap, extent = "device", legend = "topleft") +
@@ -715,6 +741,8 @@ plotCrimeDensityMap <- function(df, filename) {
 }
 
 plotCrimeDensityByMonthMap <- function(df, filename) {
+  message("Creating a plot of Density of Crimes by Month.")
+  
   dallasmap <- get_map(location = "dallas", zoom = 14, color = "bw")
   
   p <- ggmap(dallasmap, base_layer = ggplot(aes(x = long, y = lat), data = df)) +
@@ -734,11 +762,9 @@ plotCrimeDensityByMonthMap <- function(df, filename) {
 
 ####Main####
 
-# setupGoogleMaps("<API Key goes here>")
+setupGoogleMaps("<API Key goes here>")
 
-setupGoogleMaps("AIzaSyAuGTvZR1abbOcMQxutQt5127L8AXExQOo")
-
-# Supply the year to be analyzed
+# Provide the year to be analyzed
 year <- 2018
 
 data_url <- "https://www.dallasopendata.com/api/views/qv6i-rri7/rows.csv"
@@ -774,4 +800,5 @@ plotByVictimRacesAsLollipop(Violent_Crimes, paste("CrimesByRace", year, sep = "_
 plotViolentCrimesByAgeGroup(Violent_Crimes, paste("CrimesByAgeGroup", year, sep = "_"), TRUE)
 plotViolentCrimesByAgeGroupAndGender(Violent_Crimes, paste("CrimesByGender", year, sep = "_"), TRUE)
 plotAgeGroupByRace(Police_Incidents, paste("RaceByAgeGroup", year, sep = "_"), TRUE)
+
 message("Successfully completed generating all charts.")
